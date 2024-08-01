@@ -44,7 +44,73 @@ class _MobileNumberManagementViewState
                 ),
               ),
               TextButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (builder) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20.0,
+                          vertical: 20.0,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              "Add a new mobile number",
+                              style: TextStyle(
+                                fontSize: 20.0,
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(
+                              height: 10.0,
+                            ),
+                            const Text(
+                              "This number will be used for fetching accounts.",
+                              style: TextStyle(
+                                fontSize: 14.0,
+                                color: Colors.black,
+                                fontWeight: FontWeight.normal,
+                              ),
+                            ),
+                            const SizedBox(
+                              height: 10.0,
+                            ),
+                            const Text(
+                              "Enter mobile number",
+                              style: TextStyle(
+                                fontSize: 14.0,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.normal,
+                              ),
+                            ),
+                            const TextField(
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: '',
+                                hintText: '10 digit indian mobile number',
+                              ),
+                            ),
+                            const SizedBox(
+                              height: 20.0,
+                            ),
+                            ElevatedButton(
+                              onPressed: () {},
+                              style: const ButtonStyle(
+                                  minimumSize: WidgetStatePropertyAll<Size>(
+                                Size(double.infinity, 50.0),
+                              )),
+                              child: const Text("Verify number with OTP"),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
                 style: ButtonStyle(
                   foregroundColor: WidgetStateProperty.all<Color>(
                     Colors.blueAccent,

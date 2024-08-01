@@ -7,21 +7,29 @@ import '../widgets/bank_widget.dart';
 class BankAccountSelectionView extends StatefulWidget {
   const BankAccountSelectionView({
     super.key,
+    required this.selectedBanks,
+    required this.selectedBankAccounts,
     required this.bloc,
     required this.onChooseBank,
+    required this.onAddNewBankAccount,
+    required this.onRemoveBankAccount,
   });
+  final List<Map> selectedBanks;
+  final List<Map> selectedBankAccounts;
   final AccountsBloc bloc;
   final Function onChooseBank;
+  final Function(Map) onAddNewBankAccount;
+  final Function(Map) onRemoveBankAccount;
   @override
   State<BankAccountSelectionView> createState() =>
       _BankAccountSelectionViewState();
 }
 
 class _BankAccountSelectionViewState extends State<BankAccountSelectionView>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late final AccountsBloc _bloc;
-  final List<Map> _bankAccounts = [];
   final List<AnimationController> _animationControllers = [];
+  late final ValueNotifier<Map<String, dynamic>> _loadingStatusNotifier;
   bool _isLoading = true;
 
   @override
@@ -31,44 +39,59 @@ class _BankAccountSelectionViewState extends State<BankAccountSelectionView>
     _bloc = widget.bloc;
 
     // Start fetching bank accounts
-    _bloc.fetchBankAccounts();
+    _bloc.fetchBankAccounts(widget.selectedBanks);
 
     // Listen to the stream and update the UI
     _bloc.bankAccountsStream.listen(
       (account) {
         _addBankAccountWithAnimation(account);
       },
-      onDone: () {
-        setState(() {
-          _isLoading = false;
-        });
-      },
     );
+    _loadingStatusNotifier = _bloc.loadingStatus;
+    _loadingStatusNotifier.addListener(_handleLoadingStatusChange);
+  }
+
+  void _handleLoadingStatusChange() {
+    if (_bloc.loadingStatus.value['isFetching'] == false) {
+      setState(() {
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _isLoading = true;
+      });
+    }
   }
 
   @override
   void dispose() {
+    _loadingStatusNotifier.removeListener(_handleLoadingStatusChange);
     for (var controller in _animationControllers) {
-      controller
-          .dispose(); // Ensure each AnimationController is properly disposed
+      if (controller.isAnimating) {
+        controller.stop(); // Stop the animation if it's still running
+      }
+      controller.dispose();
     }
-    _bloc.dispose(); // Dispose the BLoC
     super.dispose(); // Call super.dispose() at the end
   }
 
   void _addBankAccountWithAnimation(Map account) {
+    if (!mounted) return; // Check if the widget is still mounted
     final controller = AnimationController(
       duration: const Duration(seconds: 1),
       vsync: this,
     );
     _animationControllers.add(controller);
-    _bankAccounts.add(account);
+    _bloc.myBankAccounts.add(account);
     controller.forward();
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
@@ -85,7 +108,7 @@ class _BankAccountSelectionViewState extends State<BankAccountSelectionView>
           const SizedBox(
             height: 10.0,
           ),
-          _bankAccounts.isEmpty && !_isLoading
+          _bloc.myBankAccounts.isEmpty && !_isLoading
               ? Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -128,19 +151,31 @@ class _BankAccountSelectionViewState extends State<BankAccountSelectionView>
                   ),
                 )
               : ListView.builder(
-                  itemCount: _bankAccounts.length + (_isLoading ? 1 : 0),
+                  itemCount: _bloc.myBankAccounts.length + (_isLoading ? 1 : 0),
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemBuilder: (context, index) {
-                    if (index == _bankAccounts.length) {
+                    if (index == _bloc.myBankAccounts.length) {
                       return const BankLoadingWidget();
                     }
-                    final account = _bankAccounts[index];
+                    final account = _bloc.myBankAccounts[index];
                     final controller = _animationControllers[index];
-                    return FadeTransition(
-                      opacity: controller,
-                      child: BankWidget(
-                        bank: account,
+                    final isSelected =
+                        widget.selectedBankAccounts.contains(account);
+                    return InkWell(
+                      onTap: () {
+                        if (isSelected) {
+                          widget.onRemoveBankAccount(account);
+                        } else {
+                          widget.onAddNewBankAccount(account);
+                        }
+                      },
+                      child: FadeTransition(
+                        opacity: controller,
+                        child: BankWidget(
+                          isSelected: isSelected,
+                          bank: account,
+                        ),
                       ),
                     );
                   },
@@ -152,13 +187,21 @@ class _BankAccountSelectionViewState extends State<BankAccountSelectionView>
             child: TextButton(
               style: ButtonStyle(
                 foregroundColor: WidgetStateProperty.all<Color>(
-                  Theme.of(context).primaryColor,
+                  _isLoading ? Colors.red : Theme.of(context).primaryColor,
                 ),
               ),
-              onPressed: () {},
-              child: const Text(
-                "Refresh accounts",
-                style: TextStyle(
+              onPressed: () {
+                if (_isLoading) {
+                  _bloc.stopFetching();
+                } else {
+                  _bloc.fetchBankAccounts(
+                    widget.selectedBanks,
+                  );
+                }
+              },
+              child: Text(
+                _isLoading ? "Stop fetching" : "Refresh accounts",
+                style: const TextStyle(
                   fontSize: 16.0,
                   fontWeight: FontWeight.bold,
                 ),
@@ -188,4 +231,7 @@ class _BankAccountSelectionViewState extends State<BankAccountSelectionView>
       ),
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }

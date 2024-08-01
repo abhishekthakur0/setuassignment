@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:setuassignment/modules/homepage/view/homepage.dart';
 import 'package:setuassignment/utils/extension.dart';
 
@@ -16,6 +17,9 @@ class MyApp extends StatelessWidget {
       title: const String.fromEnvironment('brand_name'),
       theme: ThemeData(
         fontFamily: const String.fromEnvironment('font'),
+        textTheme: GoogleFonts.latoTextTheme(
+          Theme.of(context).textTheme,
+        ),
         primaryColor: HexColor.fromHex(
           const String.fromEnvironment('primary_color'),
         ),

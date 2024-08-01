@@ -5,9 +5,11 @@ import '../../../utils/utility_functions.dart';
 class BankWidget extends StatelessWidget {
   const BankWidget({
     super.key,
+    required this.isSelected,
     required this.bank,
   });
 
+final bool isSelected;
   final Map bank;
   @override
   Widget build(BuildContext context) {
@@ -34,10 +36,14 @@ class BankWidget extends StatelessWidget {
       padding: const EdgeInsets.all(10.0),
       child: Row(
         children: [
-          Checkbox(
-            value: false,
-            visualDensity: VisualDensity.compact,
-            onChanged: (value) {},
+          AbsorbPointer(
+            absorbing: true,
+            child: Checkbox(
+              value: isSelected,
+              visualDensity: VisualDensity.compact,
+              activeColor: Theme.of(context).primaryColor,
+              onChanged: (value) {},
+            ),
           ),
           const SizedBox(
             width: 10.0,

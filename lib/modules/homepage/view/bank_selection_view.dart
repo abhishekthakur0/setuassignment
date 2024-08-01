@@ -1,64 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:setuassignment/modules/homepage/bloc/accounts_bloc.dart';
+
+import '../widgets/flip_opacity_transition.dart';
 
 class BankSelectionView extends StatefulWidget {
   const BankSelectionView({
     super.key,
+    required this.bloc,
     required this.selectedBanks,
-    required this.onSelectBank,
+    required this.onAddBank,
+    required this.onRemoveBank,
   });
 
+final AccountsBloc bloc;
   final List<Map> selectedBanks;
-  final Function(Map) onSelectBank;
+  final Function(Map) onAddBank;
+  final Function(Map) onRemoveBank;
 
   @override
   State<BankSelectionView> createState() => _BankSelectionViewState();
 }
 
 class _BankSelectionViewState extends State<BankSelectionView> {
-  final banks = [
-    {
-      "id": 100,
-      "active": true,
-      "title": "Axis Bank",
-      "logo_url":
-          "https://play-lh.googleusercontent.com/65bNWleT8HZ_n6NqbsdzhDIFsYW56qta2RLQWNmS4u8pECsWUVAPvT47VWbk3ZQABq-9",
-    },
-    {
-      "id": 200,
-      "active": true,
-      "title": "HDFC Bank",
-      "logo_url":
-          "https://play-lh.googleusercontent.com/65bNWleT8HZ_n6NqbsdzhDIFsYW56qta2RLQWNmS4u8pECsWUVAPvT47VWbk3ZQABq-9",
-    },
-    {
-      "id": 300,
-      "active": true,
-      "title": "ICICI Bank",
-      "logo_url":
-          "https://play-lh.googleusercontent.com/65bNWleT8HZ_n6NqbsdzhDIFsYW56qta2RLQWNmS4u8pECsWUVAPvT47VWbk3ZQABq-9",
-    },
-    {
-      "id": 400,
-      "active": true,
-      "title": "SBI Bank",
-      "logo_url":
-          "https://play-lh.googleusercontent.com/65bNWleT8HZ_n6NqbsdzhDIFsYW56qta2RLQWNmS4u8pECsWUVAPvT47VWbk3ZQABq-9",
-    },
-    {
-      "id": 500,
-      "active": false,
-      "title": "PNB Bank",
-      "logo_url":
-          "https://play-lh.googleusercontent.com/65bNWleT8HZ_n6NqbsdzhDIFsYW56qta2RLQWNmS4u8pECsWUVAPvT47VWbk3ZQABq-9",
-    },
-    {
-      "id": 600,
-      "active": false,
-      "title": "Kotak Bank",
-      "logo_url":
-          "https://play-lh.googleusercontent.com/65bNWleT8HZ_n6NqbsdzhDIFsYW56qta2RLQWNmS4u8pECsWUVAPvT47VWbk3ZQABq-9",
-    },
-  ];
+  late final AccountsBloc _bloc;
+
+  @override
+  void initState() {
+    _bloc = widget.bloc;
+    super.initState();
+  }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -111,23 +82,31 @@ class _BankSelectionViewState extends State<BankSelectionView> {
                 ),
                 child: ListView.separated(
                   shrinkWrap: true,
-                  itemCount: banks.length,
+                  itemCount: _bloc.banks.length,
                   physics: const NeverScrollableScrollPhysics(),
                   itemBuilder: (context, index) {
-                    final bank = banks[index];
+                    final bank = _bloc.banks[index];
                     final isBankAvailable = bank['active'] as bool;
                     final isSelected = widget.selectedBanks.contains(bank);
                     return ListTile(
                       enabled: isBankAvailable,
                       onTap: () {
                         if (isSelected) {
-                          widget.selectedBanks.remove(bank);
+                          widget.onRemoveBank(bank);
                         } else {
-                          widget.selectedBanks.add(bank);
+                          widget.onAddBank(bank);
                         }
                       },
                       leading: isSelected
-                          ? null
+                          ? const FlipOpacityTransition(
+                              duration: Duration(milliseconds: 1000),
+                              child: CircleAvatar(
+                                  backgroundColor: Colors.green,
+                                  child: Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                  )),
+                            )
                           : CircleAvatar(
                               backgroundColor: Colors.white,
                               child: ColorFiltered(
@@ -166,15 +145,34 @@ class _BankSelectionViewState extends State<BankSelectionView> {
                       const Divider(thickness: 1),
                 ),
               ),
-              Positioned(
-                child: CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                  child: Text(
-                    widget.selectedBanks.length.toString(),
-                    style: TextStyle(color: Theme.of(context).primaryColor),
-                  ),
-                ),
-              )
+              widget.selectedBanks.isEmpty
+                  ? const SizedBox()
+                  : Positioned(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(
+                          milliseconds: 500,
+                        ), // Duration of the animation
+                        switchInCurve: Curves.elasticIn,
+                        transitionBuilder:
+                            (Widget child, Animation<double> animation) {
+                          // Using FadeTransition to handle opacity change
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          );
+                        },
+                        child: CircleAvatar(
+                          key: ValueKey(widget.selectedBanks.length),
+                          backgroundColor:
+                              Theme.of(context).colorScheme.secondary,
+                          child: Text(
+                            widget.selectedBanks.length.toString(),
+                            style: TextStyle(
+                                color: Theme.of(context).primaryColor),
+                          ),
+                        ),
+                      ),
+                    )
             ],
           ),
           const SizedBox(

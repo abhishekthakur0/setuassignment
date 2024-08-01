@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:setuassignment/modules/homepage/bloc/accounts_bloc.dart';
 
+import '../widgets/animated_linear_progress_indicator.dart';
+import '../widgets/my_animated_count_switcher.dart';
 import '../widgets/select_account_banner.dart';
 import 'bank_account_selection_view.dart';
 import 'bank_selection_view.dart';
@@ -18,7 +20,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
     '9876543210',
   ];
 
-  final AccountsBloc _homepageBloc = AccountsBloc();
+  final AccountsBloc _bloc = AccountsBloc();
 
   late AnimationController _phoneNumbersAnimationController;
   late Animation<double> _phoneNumbersFadeAnimation;
@@ -28,6 +30,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
   late Animation<double> _bankFadeAnimation;
 
   bool _showBankSelectionView = false;
+  final List<Map> _selectedBanks = [];
   final List<Map> _selectedBankAccounts = [];
 
   @override
@@ -102,12 +105,55 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
           ],
         ),
         actions: [
-          IconButton(
-            onPressed: () {},
+          PopupMenuButton(
             icon: Icon(
               Icons.more_vert,
               color: Theme.of(context).primaryColor,
             ),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 1,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.help,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                    const SizedBox(width: 10.0),
+                    Text(
+                      'Help',
+                      style: TextStyle(
+                        fontSize: 14.0,
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 2,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.logout,
+                      color: Colors.red,
+                    ),
+                    SizedBox(width: 10.0),
+                    Text(
+                      'Cancel data sharing',
+                      style: TextStyle(
+                        fontSize: 14.0,
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           )
         ],
       ),
@@ -163,19 +209,37 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                 FadeTransition(
                   opacity: _bankFadeAnimation,
                   child: _showBankSelectionView
-                      ? BankAccountSelectionView(
-                          bloc: _homepageBloc,
+                      ? BankSelectionView(
+                          bloc: _bloc,
+                          selectedBanks: _selectedBanks,
+                          onAddBank: (newBank) {
+                            setState(() {
+                              _selectedBanks.add(newBank);
+                            });
+                          },
+                          onRemoveBank: (bank) {
+                            setState(() {
+                              _selectedBanks.remove(bank);
+                            });
+                          },
+                        )
+                      : BankAccountSelectionView(
+                          selectedBanks: _selectedBanks,
+                          selectedBankAccounts: _selectedBankAccounts,
+                          bloc: _bloc,
                           onChooseBank: () {
                             setState(() {
                               _showBankSelectionView = true;
                             });
                           },
-                        )
-                      : BankSelectionView(
-                          selectedBanks: _selectedBankAccounts,
-                          onSelectBank: (newBank) {
+                          onAddNewBankAccount: (newAccount) {
                             setState(() {
-                              _selectedBankAccounts.add(newBank);
+                              _selectedBankAccounts.add(newAccount);
+                            });
+                          },
+                          onRemoveBankAccount: (account) {
+                            setState(() {
+                              _selectedBankAccounts.remove(account);
                             });
                           },
                         ),
@@ -201,105 +265,173 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
             ),
           ),
           // Action Panel
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              (_homepageBloc.loadingPercentage > 0)
-                  ? LinearProgressIndicator(
-                      value: _homepageBloc.loadingPercentage.toDouble() ?? 0.0,
-                      minHeight: 6.0,
-                      color: Theme.of(context).primaryColor,
-                      backgroundColor: Colors.white,
-                      semanticsLabel: "Loading progress",
-                    )
-                  : const SizedBox(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20.0,
-                  vertical: 20.0,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(10.0),
+          _showBankSelectionView
+              ? Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20.0,
+                    vertical: 20.0,
                   ),
-                  boxShadow: [
-                    // Simple box shadow
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      spreadRadius: 4,
-                      blurRadius: 2,
-                      offset: const Offset(0, 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(10.0),
                     ),
-                  ],
-                ),
-                child: _showBankSelectionView
-                    ? ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _showBankSelectionView = false;
-                          });
-                        },
-                        style: const ButtonStyle(
-                          minimumSize: WidgetStatePropertyAll<Size>(
-                            Size(double.infinity, 50.0),
-                          ),
+                    boxShadow: [
+                      // Simple box shadow
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        spreadRadius: 4,
+                        blurRadius: 2,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      _selectedBankAccounts.clear();
+                      setState(() {
+                        _showBankSelectionView = false;
+                      });
+                    },
+                    style: ButtonStyle(
+                        minimumSize: const WidgetStatePropertyAll<Size>(
+                          Size(double.infinity, 50.0),
                         ),
-                        child: const Text(
-                          "Fetch my accounts",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                        backgroundColor: _selectedBanks.isEmpty
+                            ? const WidgetStatePropertyAll(Colors.grey)
+                            : null),
+                    child: const Text(
+                      "Fetch my accounts",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                )
+              : ValueListenableBuilder<Map<String, dynamic>>(
+                  valueListenable: _bloc.loadingStatus,
+                  builder: (context, value, child) {
+                    bool isLoading = value["isFetching"] ?? false;
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        isLoading
+                            ? AnimatedLinearProgressIndicator(
+                                value: value["percentage"].toDouble() / 100,
+                              )
+                            : const SizedBox(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20.0,
+                            vertical: 20.0,
                           ),
-                        ),
-                      )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "1",
-                                style: TextStyle(
-                                  fontSize: 18.0,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                " accounts selected",
-                                style: TextStyle(
-                                  fontSize: 14.0,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.normal,
-                                ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(10.0),
+                            ),
+                            boxShadow: [
+                              // Simple box shadow
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.2),
+                                spreadRadius: 4,
+                                blurRadius: 2,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                          const SizedBox(
-                            height: 20.0,
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              setState(() {});
-                            },
-                            style: const ButtonStyle(
-                              minimumSize: WidgetStatePropertyAll<Size>(
-                                Size(double.infinity, 50.0),
-                              ),
-                            ),
-                            child: const Text(
-                              "Verify accounts",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-            ],
-          ),
+                          child: isLoading
+                              ? AnimatedOpacity(
+                                  duration: const Duration(milliseconds: 200),
+                                  opacity: isLoading ? 1.0 : 0.0,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        "Fetching accounts linked to your mobile number",
+                                        style: TextStyle(
+                                          fontSize: 14.0,
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.normal,
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        height: 10.0,
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () {},
+                                        style: const ButtonStyle(
+                                          backgroundColor:
+                                              WidgetStatePropertyAll<Color>(
+                                                  Colors.grey),
+                                          minimumSize:
+                                              WidgetStatePropertyAll<Size>(
+                                            Size(double.infinity, 40.0),
+                                          ),
+                                        ),
+                                        child: const SizedBox(
+                                          height: 20.0,
+                                          width: 20.0,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 4,
+                                          ),
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                )
+                              : Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        MyAnimatedSwitcher(
+                                          itemCount:
+                                              _selectedBankAccounts.length,
+                                        ),
+                                        Text(
+                                          " ${_selectedBankAccounts.length > 1 ? "accounts" : "account"} selected",
+                                          style: const TextStyle(
+                                            fontSize: 14.0,
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.normal,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(
+                                      height: 20.0,
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {},
+                                      style: ButtonStyle(
+                                        minimumSize:
+                                            const WidgetStatePropertyAll<Size>(
+                                          Size(double.infinity, 50.0),
+                                        ),
+                                        backgroundColor:
+                                            _selectedBankAccounts.isEmpty
+                                                ? const WidgetStatePropertyAll<
+                                                    Color>(Colors.grey)
+                                                : null,
+                                      ),
+                                      child: const Text(
+                                        "Verify accounts",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ],
+                    );
+                  }),
         ],
       ),
     );
